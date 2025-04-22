@@ -4,25 +4,33 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, db
 
-# === Dynamically write the service account key from GitHub secret to a temporary file ===
-if not firebase_admin._apps:
-    key_path = "temp_firebase_key.json"
+# === Firebase Initialization ===
 
-    if not os.path.exists(key_path):
+def initialize_firebase():
+    if not firebase_admin._apps:
         try:
-            firebase_secret = os.environ.get("FIREBASE_KEY")
-            if firebase_secret is None:
-                raise ValueError("FIREBASE_KEY environment variable not set.")
-            
+            firebase_key_raw = st.secrets["FIREBASE_KEY"]
+            firebase_key_json = json.loads(firebase_key_raw)
+            firebase_key_json["private_key"] = firebase_key_json["private_key"].replace("\\n", "\n")
+
+            key_path = "temp_firebase_key.json"
             with open(key_path, "w") as f:
-                json.dump(json.loads(firebase_secret), f)
+                json.dump(firebase_key_json, f)
+
+            cred = credentials.Certificate(key_path)
+            firebase_admin.initialize_app(cred, {
+                "databaseURL": "https://esp-os-project-74989-default-rtdb.firebaseio.com"
+            })
+
+        except KeyError:
+            st.error("FIREBASE_KEY not found in Streamlit secrets.")
+        except json.JSONDecodeError:
+            st.error("Failed to parse FIREBASE_KEY. Ensure it's valid JSON with escaped newlines.")
         except Exception as e:
-            st.error(f"Failed to create Firebase key file: {e}")
-    
-    cred = credentials.Certificate(key_path)
-    firebase_admin.initialize_app(cred, {
-        "databaseURL": "https://esp-os-project-74989-default-rtdb.firebaseio.com"
-    })
+            st.error(f"Failed to initialize Firebase: {e}")
+
+# Call initializer once
+initialize_firebase()
 
 # === Firebase Read and Write Functions ===
 

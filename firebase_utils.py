@@ -4,7 +4,7 @@ from firebase_admin import credentials, db
 
 # Initialize Firebase Admin SDK once
 if not firebase_admin._apps:
-    cred = credentials.Certificate("serviceAccountKey1.json")
+    cred = credentials.Certificate(".gitignore/serviceAccountKey1.json")
     firebase_admin.initialize_app(cred, {"databaseURL": "https://esp-os-project-74989-default-rtdb.firebaseio.com"})
 
 # === Firebase Read and Write Functions ===

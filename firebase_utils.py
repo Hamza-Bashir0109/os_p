@@ -1,11 +1,28 @@
+import os
+import json
 import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, db
 
-# Initialize Firebase Admin SDK once
+# === Dynamically write the service account key from GitHub secret to a temporary file ===
 if not firebase_admin._apps:
-    cred = credentials.Certificate(".gitignore/serviceAccountKey1.json")
-    firebase_admin.initialize_app(cred, {"databaseURL": "https://esp-os-project-74989-default-rtdb.firebaseio.com"})
+    key_path = "temp_firebase_key.json"
+
+    if not os.path.exists(key_path):
+        try:
+            firebase_secret = os.environ.get("FIREBASE_KEY")
+            if firebase_secret is None:
+                raise ValueError("FIREBASE_KEY environment variable not set.")
+            
+            with open(key_path, "w") as f:
+                json.dump(json.loads(firebase_secret), f)
+        except Exception as e:
+            st.error(f"Failed to create Firebase key file: {e}")
+    
+    cred = credentials.Certificate(key_path)
+    firebase_admin.initialize_app(cred, {
+        "databaseURL": "https://esp-os-project-74989-default-rtdb.firebaseio.com"
+    })
 
 # === Firebase Read and Write Functions ===
 
@@ -41,6 +58,7 @@ def update_value(path, value, device_id="Device_001"):
     except Exception as e:
         st.error(f"Failed to update Firebase: {e}")
         return False
+
 def get_power_status():
     try:
         ref = db.reference("Device_001/led/state")
